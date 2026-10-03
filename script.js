@@ -1,13 +1,27 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-let W, H;
+// =========================
+// دقة عالية
+// =========================
+
+let W = 0;
+let H = 0;
+let DPR = 1;
 
 function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
-    canvas.width = W;
-    canvas.height = H;
+
+    DPR = Math.min(window.devicePixelRatio || 1, 5);
+
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 
 resize();
@@ -21,9 +35,11 @@ window.addEventListener("resize", resize);
 const player = {
     lane: 1,
     targetLane: 1,
+
     jumping: false,
     jumpY: 0,
     jumpVelocity: 0,
+
     runTime: 0
 };
 
@@ -48,24 +64,38 @@ function jump() {
 
     if (!player.jumping) {
         player.jumping = true;
-        player.jumpVelocity = 16;
+        player.jumpY = 0;
+        player.jumpVelocity = 18;
     }
 }
 
+
+// =========================
+// الكيبورد
+// =========================
+
 document.addEventListener("keydown", function (e) {
 
-    if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") {
+    if (
+        e.key === "ArrowLeft" ||
+        e.key.toLowerCase() === "a"
+    ) {
+        e.preventDefault();
         moveLeft();
     }
 
-    if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") {
+    if (
+        e.key === "ArrowRight" ||
+        e.key.toLowerCase() === "d"
+    ) {
+        e.preventDefault();
         moveRight();
     }
 
     if (
         e.key === "ArrowUp" ||
-        e.key === "w" ||
-        e.key === " "
+        e.key.toLowerCase() === "w" ||
+        e.code === "Space"
     ) {
         e.preventDefault();
         jump();
@@ -73,36 +103,80 @@ document.addEventListener("keydown", function (e) {
 
 });
 
-document.getElementById("left")?.addEventListener("click", moveLeft);
-document.getElementById("right")?.addEventListener("click", moveRight);
-document.getElementById("jump")?.addEventListener("click", jump);
+
+// =========================
+// أزرار الجوال
+// =========================
+
+const leftButton = document.getElementById("left");
+const jumpButton = document.getElementById("jump");
+const rightButton = document.getElementById("right");
+
+if (leftButton) {
+    leftButton.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        moveLeft();
+    });
+}
+
+if (rightButton) {
+    rightButton.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        moveRight();
+    });
+}
+
+if (jumpButton) {
+    jumpButton.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        jump();
+    });
+}
 
 
 // =========================
-// العملات والعقبات
+// عالم اللعبة
 // =========================
-
-let coins = [
-    { lane: 1, z: 30, collected: false },
-    { lane: 0, z: 55, collected: false },
-    { lane: 2, z: 80, collected: false },
-    { lane: 1, z: 105, collected: false },
-    { lane: 0, z: 130, collected: false },
-    { lane: 2, z: 155, collected: false },
-    { lane: 1, z: 180, collected: false },
-    { lane: 0, z: 210, collected: false },
-    { lane: 2, z: 240, collected: false }
-];
-
-let obstacles = [
-    { lane: 0, z: 70 },
-    { lane: 2, z: 115 },
-    { lane: 1, z: 160 },
-    { lane: 0, z: 205 },
-    { lane: 2, z: 250 }
-];
 
 let playerZ = 0;
+
+let gameSpeed = 0.42;
+
+// المرحلة أصبحت طويلة
+const levelLength = 1200;
+
+
+// =========================
+// العقبات
+// =========================
+
+const obstacles = [];
+
+for (let z = 80; z < levelLength; z += 55) {
+
+    obstacles.push({
+        lane: Math.floor(Math.random() * 3),
+        z: z
+    });
+}
+
+
+// =========================
+// العملات
+// =========================
+
+const coins = [];
+
+for (let z = 35; z < levelLength; z += 28) {
+
+    coins.push({
+        lane: Math.floor(Math.random() * 3),
+        z: z,
+        collected: false
+    });
+}
+
+
 let score = 0;
 
 
@@ -113,13 +187,14 @@ let score = 0;
 function project(lane, z) {
 
     const horizon = H * 0.36;
+
     const distance = z - playerZ;
 
-    if (distance < 0 || distance > 280) {
+    if (distance < 0 || distance > 330) {
         return null;
     }
 
-    const depth = 1 - distance / 280;
+    const depth = 1 - distance / 330;
 
     const roadWidth =
         W * (0.08 + depth * 0.84);
@@ -135,7 +210,7 @@ function project(lane, z) {
         depth * (H - horizon);
 
     const scale =
-        0.15 + depth * 1.7;
+        0.12 + depth * 1.8;
 
     return {
         x: x,
@@ -151,16 +226,27 @@ function project(lane, z) {
 
 function drawBackground() {
 
-    const gradient =
-        ctx.createLinearGradient(0, 0, 0, H);
+    const sky =
+        ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            H
+        );
 
-    gradient.addColorStop(0, "#69c9f5");
-    gradient.addColorStop(0.55, "#dff7ff");
-    gradient.addColorStop(0.56, "#72b95a");
-    gradient.addColorStop(1, "#4b963f");
+    sky.addColorStop(0, "#58bff0");
+    sky.addColorStop(0.55, "#d9f5ff");
+    sky.addColorStop(0.56, "#72b85b");
+    sky.addColorStop(1, "#4b943f");
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = sky;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
 }
 
 
@@ -174,15 +260,31 @@ function drawRoad() {
 
     ctx.beginPath();
 
-    ctx.moveTo(W * 0.46, horizon);
-    ctx.lineTo(W * 0.54, horizon);
-    ctx.lineTo(W * 0.94, H);
-    ctx.lineTo(W * 0.06, H);
+    ctx.moveTo(
+        W * 0.46,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.54,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.94,
+        H
+    );
+
+    ctx.lineTo(
+        W * 0.06,
+        H
+    );
 
     ctx.closePath();
 
     ctx.fillStyle = "#353535";
     ctx.fill();
+
 
     // حواف الشارع
 
@@ -190,44 +292,76 @@ function drawRoad() {
     ctx.lineWidth = 5;
 
     ctx.beginPath();
-    ctx.moveTo(W * 0.46, horizon);
-    ctx.lineTo(W * 0.06, H);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(W * 0.54, horizon);
-    ctx.lineTo(W * 0.94, H);
-    ctx.stroke();
-
-
-    // خطوط المسارات الثلاثة
-
-    drawLaneLine(0.46, 0.06, 0.50, 0.33);
-    drawLaneLine(0.50, 0.33, 0.54, 0.67);
-    drawLaneLine(0.54, 0.67, 0.50, 0.94);
-}
-
-
-function drawLaneLine(topX, bottomX, topX2, bottomX2) {
-
-    const horizon = H * 0.36;
-
-    ctx.strokeStyle = "rgba(255,255,255,0.75)";
-    ctx.lineWidth = 4;
-
-    ctx.beginPath();
 
     ctx.moveTo(
-        W * topX2,
+        W * 0.46,
         horizon
     );
 
     ctx.lineTo(
-        W * bottomX2,
+        W * 0.06,
         H
     );
 
     ctx.stroke();
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        W * 0.54,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.94,
+        H
+    );
+
+    ctx.stroke();
+
+
+    // خط المسار الأول
+
+    ctx.strokeStyle =
+        "rgba(255,255,255,0.75)";
+
+    ctx.lineWidth = 4;
+
+    ctx.setLineDash([20, 25]);
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        W * 0.487,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.33,
+        H
+    );
+
+    ctx.stroke();
+
+
+    // خط المسار الثاني
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        W * 0.513,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.67,
+        H
+    );
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
 }
 
 
@@ -237,15 +371,19 @@ function drawLaneLine(topX, bottomX, topX2, bottomX2) {
 
 function drawEnvironment() {
 
-    for (let z = 25; z < 280; z += 35) {
+    for (
+        let z = 25;
+        z < levelLength;
+        z += 38
+    ) {
 
         const p = project(1, z);
 
         if (!p) continue;
 
-        const size = 35 * p.scale;
+        const size =
+            35 * p.scale;
 
-        // البيت اليسار
 
         drawHouse(
             p.x - 150 * p.scale,
@@ -253,7 +391,6 @@ function drawEnvironment() {
             size
         );
 
-        // البيت اليمين
 
         drawHouse(
             p.x + 150 * p.scale,
@@ -261,7 +398,6 @@ function drawEnvironment() {
             size
         );
 
-        // شجرة يسار
 
         drawTree(
             p.x - 90 * p.scale,
@@ -269,7 +405,6 @@ function drawEnvironment() {
             size * 0.8
         );
 
-        // شجرة يمين
 
         drawTree(
             p.x + 90 * p.scale,
@@ -292,6 +427,7 @@ function drawHouse(x, y, size) {
         size * 2,
         size * 1.4
     );
+
 
     ctx.fillStyle = "#9b493d";
 
@@ -316,6 +452,7 @@ function drawHouse(x, y, size) {
 
     ctx.fill();
 
+
     // الباب
 
     ctx.fillStyle = "#70452f";
@@ -326,6 +463,7 @@ function drawHouse(x, y, size) {
         size * 0.4,
         size * 0.7
     );
+
 
     // النافذة
 
@@ -353,6 +491,7 @@ function drawTree(x, y, size) {
         size * 1.5
     );
 
+
     ctx.fillStyle = "#287a3e";
 
     ctx.beginPath();
@@ -379,14 +518,17 @@ function drawCoins() {
 
         if (coin.collected) return;
 
-        const p = project(
-            coin.lane,
-            coin.z
-        );
+        const p =
+            project(
+                coin.lane,
+                coin.z
+            );
 
         if (!p) return;
 
-        const radius = 10 * p.scale;
+        const radius =
+            11 * p.scale;
+
 
         ctx.beginPath();
 
@@ -401,10 +543,11 @@ function drawCoins() {
         ctx.fillStyle = "#ffd43b";
         ctx.fill();
 
+
         ctx.strokeStyle = "#c89400";
         ctx.lineWidth = 3;
-        ctx.stroke();
 
+        ctx.stroke();
     });
 }
 
@@ -417,17 +560,22 @@ function drawObstacles() {
 
     obstacles.forEach(obstacle => {
 
-        const p = project(
-            obstacle.lane,
-            obstacle.z
-        );
+        const p =
+            project(
+                obstacle.lane,
+                obstacle.z
+            );
 
         if (!p) return;
 
-        const width = 28 * p.scale;
-        const height = 25 * p.scale;
+        const width =
+            30 * p.scale;
 
-        ctx.fillStyle = "#f08a24";
+        const height =
+            28 * p.scale;
+
+
+        ctx.fillStyle = "#ef7e22";
 
         ctx.fillRect(
             p.x - width,
@@ -436,8 +584,15 @@ function drawObstacles() {
             height
         );
 
+
         ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = Math.max(2, 3 * p.scale);
+
+        ctx.lineWidth =
+            Math.max(
+                2,
+                3 * p.scale
+            );
+
 
         ctx.beginPath();
 
@@ -450,6 +605,7 @@ function drawObstacles() {
             p.x,
             p.y
         );
+
 
         ctx.moveTo(
             p.x,
@@ -467,50 +623,69 @@ function drawObstacles() {
 
 
 // =========================
-// اللاعب من الخلف
+// اللاعب
 // =========================
 
 function drawPlayer() {
 
-    // حركة يمين ويسار
+    // انتقال بين المسارات
 
     player.lane +=
-        (player.targetLane - player.lane) * 0.15;
+        (
+            player.targetLane -
+            player.lane
+        ) * 0.15;
+
 
     // حركة الجري
 
     player.runTime += 0.25;
 
+
     // القفز
 
     if (player.jumping) {
 
-        player.jumpY += player.jumpVelocity;
+        player.jumpY +=
+            player.jumpVelocity;
 
         player.jumpVelocity -= 0.8;
+
 
         if (player.jumpY <= 0) {
 
             player.jumpY = 0;
+
             player.jumpVelocity = 0;
+
             player.jumping = false;
         }
     }
 
-    const laneX =
-        (player.lane - 1) * W * 0.16;
+
+    const laneOffset =
+        (player.lane - 1) *
+        W * 0.16;
+
 
     const x =
-        W / 2 + laneX;
+        W / 2 +
+        laneOffset;
+
 
     const groundY =
-        H - 100;
+        H - 105;
+
 
     const y =
-        groundY - player.jumpY;
+        groundY -
+        player.jumpY;
+
 
     const legMove =
-        Math.sin(player.runTime) * 18;
+        Math.sin(
+            player.runTime
+        ) * 18;
 
 
     // الظل
@@ -527,14 +702,18 @@ function drawPlayer() {
         Math.PI * 2
     );
 
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillStyle =
+        "rgba(0,0,0,0.3)";
+
     ctx.fill();
 
 
     // الرجل اليسرى
 
     ctx.strokeStyle = "#172536";
+
     ctx.lineWidth = 15;
+
     ctx.lineCap = "round";
 
     ctx.beginPath();
@@ -611,6 +790,7 @@ function drawPlayer() {
     );
 
     ctx.fillStyle = "#c98f68";
+
     ctx.fill();
 
 
@@ -627,12 +807,14 @@ function drawPlayer() {
     );
 
     ctx.fillStyle = "#202020";
+
     ctx.fill();
 
 
     // الذراع اليسرى
 
     ctx.strokeStyle = "#2670ad";
+
     ctx.lineWidth = 13;
 
     ctx.beginPath();
@@ -675,9 +857,12 @@ function drawPlayer() {
 function drawChaser() {
 
     const x = W / 2;
+
     const y = H - 28;
 
+
     ctx.fillStyle = "#292929";
+
 
     ctx.beginPath();
 
@@ -691,6 +876,7 @@ function drawChaser() {
 
     ctx.fill();
 
+
     ctx.fillRect(
         x - 18,
         y - 20,
@@ -701,7 +887,7 @@ function drawChaser() {
 
 
 // =========================
-// الاصطدام وجمع العملات
+// الاصطدام
 // =========================
 
 function checkCollisions() {
@@ -714,11 +900,14 @@ function checkCollisions() {
 
         if (
             obstacle.lane === currentLane &&
-            Math.abs(obstacle.z - playerZ) < 3 &&
+            Math.abs(
+                obstacle.z - playerZ
+            ) < 3 &&
             player.jumpY < 45
         ) {
 
             alert("اصطدمت بالعقبة!");
+
             location.reload();
         }
     });
@@ -728,24 +917,61 @@ function checkCollisions() {
 
         if (coin.collected) return;
 
+
         if (
             coin.lane === currentLane &&
-            Math.abs(coin.z - playerZ) < 4
+            Math.abs(
+                coin.z - playerZ
+            ) < 4
         ) {
 
             coin.collected = true;
 
             score++;
 
+
             const scoreElement =
                 document.getElementById("score");
 
+
             if (scoreElement) {
+
                 scoreElement.textContent =
                     "🪙 " + score;
             }
         }
     });
+}
+
+
+// =========================
+// نهاية المرحلة
+// =========================
+
+function checkLevelEnd() {
+
+    if (playerZ >= levelLength) {
+
+        alert(
+            "🎉 مبروك! أكملت المرحلة الأولى!"
+        );
+
+        playerZ = 0;
+
+        score = 0;
+
+        coins.forEach(
+            coin => coin.collected = false
+        );
+
+        const stage =
+            document.getElementById("stage");
+
+        if (stage) {
+            stage.textContent =
+                "المرحلة 2";
+        }
+    }
 }
 
 
@@ -762,9 +988,10 @@ function gameLoop() {
         H
     );
 
-    // الشخصية تتحرك للأمام فعليًا
 
-    playerZ += 0.45;
+    // الشخصية تتحرك للأمام
+
+    playerZ += gameSpeed;
 
 
     drawBackground();
@@ -781,10 +1008,15 @@ function gameLoop() {
 
     drawPlayer();
 
+
     checkCollisions();
 
+    checkLevelEnd();
 
-    requestAnimationFrame(gameLoop);
+
+    requestAnimationFrame(
+        gameLoop
+    );
 }
 
 
