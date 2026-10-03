@@ -9,23 +9,12 @@
 
 <body>
 
-<div id="game">
+    <canvas id="gameCanvas"></canvas>
 
-    <div id="sky"></div>
-
-    <div id="road">
-        <div class="lane-line line-left"></div>
-        <div class="lane-line line-right"></div>
-
-        <div id="obstacles"></div>
-        <div id="coins"></div>
+    <div id="hud">
+        <div id="stage">المرحلة 1</div>
+        <div id="score">🪙 0</div>
     </div>
-
-    <div id="player">🏃</div>
-    <div id="chaser">👤</div>
-
-    <div id="score">🪙 0</div>
-    <div id="stage">المرحلة 1</div>
 
     <div id="controls">
         <button id="left">⬅️</button>
@@ -33,9 +22,7 @@
         <button id="right">➡️</button>
     </div>
 
-</div>
-
-<script src="script.js"></script>
+    <script src="script.js"></script>
 
 </body>
 </html>
