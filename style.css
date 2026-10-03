@@ -4,120 +4,36 @@
     padding: 0;
 }
 
+html,
 body {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     background: #111;
     font-family: Arial, sans-serif;
     touch-action: none;
 }
 
-#game {
-    position: relative;
+#gameCanvas {
+    display: block;
     width: 100vw;
     height: 100vh;
-    overflow: hidden;
 }
 
-/* السماء */
-#sky {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        #63c7ff 0%,
-        #bcecff 48%,
-        #8dcc67 48%,
-        #4c963d 100%
-    );
-}
-
-/* الطريق */
-#road {
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: 70%;
-    height: 100%;
-    background: #3a3a3a;
-    clip-path: polygon(
-        42% 0%,
-        58% 0%,
-        100% 100%,
-        0% 100%
-    );
-    overflow: hidden;
-}
-
-/* خطوط المسارات */
-.lane-line {
-    position: absolute;
-    width: 5px;
-    height: 100%;
-    background: repeating-linear-gradient(
-        to bottom,
-        white 0px,
-        white 45px,
-        transparent 45px,
-        transparent 90px
-    );
-    opacity: 0.8;
-}
-
-.line-left {
-    left: 33%;
-}
-
-.line-right {
-    right: 33%;
-}
-
-/* اللاعب */
-#player {
-    position: absolute;
-    left: 50%;
-    bottom: 125px;
-    transform: translateX(-50%);
-    font-size: 75px;
+#hud {
+    position: fixed;
+    top: 18px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 18px;
     z-index: 10;
-    transition: left 0.15s;
+    pointer-events: none;
 }
 
-/* المطارد */
-#chaser {
-    position: absolute;
-    left: 50%;
-    bottom: 45px;
-    transform: translateX(-50%);
-    font-size: 55px;
-    z-index: 9;
-}
-
-/* العملات والعقبات */
-#obstacles,
-#coins {
-    position: absolute;
-    inset: 0;
-    z-index: 7;
-}
-
-/* العملة */
-.coin {
-    position: absolute;
-    font-size: 30px;
-}
-
-/* العقبة */
-.obstacle {
-    position: absolute;
-    font-size: 45px;
-}
-
-/* المعلومات */
-#score,
-#stage {
-    position: absolute;
-    top: 20px;
-    z-index: 20;
+#stage,
+#score {
     background: rgba(0, 0, 0, 0.65);
     color: white;
     padding: 10px 16px;
@@ -125,56 +41,41 @@ body {
     font-size: 19px;
 }
 
-#score {
-    right: 20px;
-}
-
-#stage {
-    left: 20px;
-}
-
-/* أزرار الجوال */
 #controls {
-    position: absolute;
-    bottom: 20px;
+    position: fixed;
     left: 50%;
+    bottom: 18px;
     transform: translateX(-50%);
     display: flex;
     gap: 15px;
-    z-index: 30;
+    z-index: 20;
 }
 
 #controls button {
     width: 70px;
     height: 60px;
-    border: none;
-    border-radius: 15px;
+    border: 0;
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.85);
     font-size: 28px;
+    cursor: pointer;
+    user-select: none;
 }
 
 #controls button:active {
     transform: scale(0.9);
 }
 
-/* الجوال */
 @media (max-width: 600px) {
-
-    #road {
-        width: 90%;
-    }
-
-    #player {
-        font-size: 60px;
-        bottom: 115px;
-    }
-
-    #chaser {
-        font-size: 45px;
-    }
-
     #controls button {
         width: 62px;
         height: 55px;
+        font-size: 24px;
+    }
+
+    #stage,
+    #score {
+        font-size: 16px;
+        padding: 8px 12px;
     }
 }
