@@ -1,8 +1,13 @@
 const player = document.getElementById("player");
 const chaser = document.getElementById("chaser");
+const obstacles = document.getElementById("obstacles");
+const coins = document.getElementById("coins");
+const scoreElement = document.getElementById("score");
 
 let lane = 1;
+let score = 0;
 let jumping = false;
+let gameRunning = true;
 
 const lanes = [35, 50, 65];
 
@@ -25,16 +30,15 @@ function moveRight() {
 }
 
 function jump() {
-    if (jumping) return;
+    if (jumping || !gameRunning) return;
 
     jumping = true;
-
-    player.style.bottom = "250px";
+    player.style.bottom = "260px";
 
     setTimeout(() => {
-        player.style.bottom = "130px";
+        player.style.bottom = "125px";
         jumping = false;
-    }, 500);
+    }, 550);
 }
 
 /* أزرار الجوال */
@@ -44,33 +48,135 @@ document.getElementById("jump").addEventListener("click", jump);
 
 /* الكيبورد */
 document.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowLeft") {
-        moveLeft();
-    }
-
-    if (event.key === "ArrowRight") {
-        moveRight();
-    }
+    if (event.key === "ArrowLeft") moveLeft();
+    if (event.key === "ArrowRight") moveRight();
 
     if (event.key === "ArrowUp" || event.key === " ") {
         jump();
     }
 });
 
-/* حركة بسيطة للمطارد */
-let chaserPosition = 45;
+/* إنشاء عملة */
+function createCoin() {
 
-function moveChaser() {
-    chaserPosition += 0.03;
+    const coin = document.createElement("div");
 
-    if (chaserPosition > 55) {
-        chaserPosition = 45;
-    }
+    coin.className = "coin";
+    coin.textContent = "🪙";
 
-    chaser.style.bottom = chaserPosition + "px";
+    const randomLane = Math.floor(Math.random() * 3);
 
-    requestAnimationFrame(moveChaser);
+    coin.dataset.lane = randomLane;
+
+    coin.style.left = lanes[randomLane] + "%";
+    coin.style.top = "-50px";
+
+    coins.appendChild(coin);
+
+    moveObject(coin, "coin");
 }
 
+/* إنشاء عقبة */
+function createObstacle() {
+
+    const obstacle = document.createElement("div");
+
+    obstacle.className = "obstacle";
+    obstacle.textContent = "🚧";
+
+    const randomLane = Math.floor(Math.random() * 3);
+
+    obstacle.dataset.lane = randomLane;
+
+    obstacle.style.left = lanes[randomLane] + "%";
+    obstacle.style.top = "-60px";
+
+    obstacles.appendChild(obstacle);
+
+    moveObject(obstacle, "obstacle");
+}
+
+/* حركة الأشياء من بعيد نحو اللاعب */
+function moveObject(object, type) {
+
+    let position = -60;
+    let size = 0.4;
+
+    const speed = 4;
+
+    function animate() {
+
+        if (!gameRunning) return;
+
+        position += speed;
+        size += 0.025;
+
+        object.style.top = position + "px";
+        object.style.transform =
+            `translateX(-50%) scale(${size})`;
+
+        /* جمع العملة */
+        if (
+            type === "coin" &&
+            position > window.innerHeight - 280 &&
+            position < window.innerHeight - 100 &&
+            Number(object.dataset.lane) === lane
+        ) {
+            score++;
+            scoreElement.textContent = "🪙 " + score;
+            object.remove();
+            return;
+        }
+
+        /* اصطدام بالعقبة */
+        if (
+            type === "obstacle" &&
+            position > window.innerHeight - 250 &&
+            position < window.innerHeight - 100 &&
+            Number(object.dataset.lane) === lane &&
+            !jumping
+        ) {
+            gameOver();
+            return;
+        }
+
+        if (position < window.innerHeight + 100) {
+            requestAnimationFrame(animate);
+        } else {
+            object.remove();
+        }
+    }
+
+    animate();
+}
+
+/* نهاية اللعبة */
+function gameOver() {
+
+    gameRunning = false;
+
+    setTimeout(() => {
+        alert("انتهت الجولة! العملات: " + score);
+        location.reload();
+    }, 100);
+}
+
+/* توليد العملات والعقبات */
+setInterval(() => {
+
+    if (gameRunning) {
+        createCoin();
+    }
+
+}, 1300);
+
+setInterval(() => {
+
+    if (gameRunning) {
+        createObstacle();
+    }
+
+}, 1800);
+
+/* البداية */
 updatePlayer();
-moveChaser();
