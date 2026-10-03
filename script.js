@@ -1,7 +1,8 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-let W, H;
+let W = 0;
+let H = 0;
 
 function resize() {
     W = window.innerWidth;
@@ -13,7 +14,14 @@ function resize() {
     canvas.style.width = W + "px";
     canvas.style.height = H + "px";
 
-    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    ctx.setTransform(
+        devicePixelRatio,
+        0,
+        0,
+        devicePixelRatio,
+        0,
+        0
+    );
 }
 
 window.addEventListener("resize", resize);
@@ -23,152 +31,314 @@ resize();
    اللاعب
 ========================= */
 
-let playerX = 0;
-let playerTargetX = 0;
-
-let playerZ = 0;
-let runTime = 0;
-
-const speed = 0.08;
+const player = {
+    x: 0,
+    targetX: 0,
+    z: 0,
+    speed: 0.12,
+    run: 0
+};
 
 /* =========================
    التحكم
 ========================= */
 
 function moveLeft() {
-    playerTargetX -= 1;
+    player.targetX -= 1;
 
-    if (playerTargetX < -1) {
-        playerTargetX = -1;
+    if (player.targetX < -1.2) {
+        player.targetX = -1.2;
     }
 }
 
 function moveRight() {
-    playerTargetX += 1;
+    player.targetX += 1;
 
-    if (playerTargetX > 1) {
-        playerTargetX = 1;
+    if (player.targetX > 1.2) {
+        player.targetX = 1.2;
     }
 }
 
-document.addEventListener("keydown", (event) => {
+document.addEventListener("keydown", function (e) {
 
-    if (event.key === "ArrowLeft") {
+    if (e.key === "ArrowLeft" || e.key.toLowerCase() === "a") {
         moveLeft();
     }
 
-    if (event.key === "ArrowRight") {
+    if (e.key === "ArrowRight" || e.key.toLowerCase() === "d") {
         moveRight();
     }
 
 });
 
-document.getElementById("left").addEventListener("click", moveLeft);
-document.getElementById("right").addEventListener("click", moveRight);
+/* أزرار الجوال */
+
+const leftButton = document.getElementById("left");
+const rightButton = document.getElementById("right");
+
+if (leftButton) {
+    leftButton.addEventListener("click", moveLeft);
+}
+
+if (rightButton) {
+    rightButton.addEventListener("click", moveRight);
+}
 
 /* =========================
-   رسم السماء والأرض
+   منظور الشارع
+========================= */
+
+function project(worldX, worldZ) {
+
+    const horizon = H * 0.36;
+
+    const cameraZ = player.z - 8;
+
+    const distance = worldZ - cameraZ;
+
+    if (distance <= 0.5) {
+        return null;
+    }
+
+    const depth = Math.min(
+        distance / 100,
+        1
+    );
+
+    const perspective = 1 - depth;
+
+    const roadWidth =
+        55 +
+        perspective * W * 0.75;
+
+    const x =
+        W / 2 +
+        (worldX / 4) * roadWidth;
+
+    const y =
+        horizon +
+        Math.pow(perspective, 1.7) *
+        (H - horizon);
+
+    const scale =
+        0.15 +
+        perspective * 1.8;
+
+    return {
+        x: x,
+        y: y,
+        scale: scale
+    };
+}
+
+/* =========================
+   العالم
 ========================= */
 
 function drawWorld() {
 
     /* السماء */
 
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    const sky = ctx.createLinearGradient(
+        0,
+        0,
+        0,
+        H
+    );
 
-    sky.addColorStop(0, "#63c9ff");
-    sky.addColorStop(0.55, "#d9f4ff");
-    sky.addColorStop(0.56, "#77b85c");
-    sky.addColorStop(1, "#4b913d");
+    sky.addColorStop(0, "#58bdf2");
+    sky.addColorStop(0.55, "#d8f2ff");
+    sky.addColorStop(0.56, "#75b65b");
+    sky.addColorStop(1, "#4c923f");
 
     ctx.fillStyle = sky;
-
     ctx.fillRect(0, 0, W, H);
-
-    /* الأفق */
 
     const horizon = H * 0.36;
 
-    /* الشارع */
+    /* =====================
+       الشارع
+    ===================== */
 
     ctx.beginPath();
 
-    ctx.moveTo(W * 0.46, horizon);
-    ctx.lineTo(W * 0.54, horizon);
+    ctx.moveTo(
+        W * 0.47,
+        horizon
+    );
 
-    ctx.lineTo(W * 0.92, H);
-    ctx.lineTo(W * 0.08, H);
+    ctx.lineTo(
+        W * 0.53,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.94,
+        H
+    );
+
+    ctx.lineTo(
+        W * 0.06,
+        H
+    );
 
     ctx.closePath();
 
-    ctx.fillStyle = "#353535";
-
+    ctx.fillStyle = "#343434";
     ctx.fill();
 
-    /* حواف الشارع */
+    /* حافة يسار */
 
-    ctx.strokeStyle = "#eeeeee";
+    ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 6;
 
     ctx.beginPath();
 
-    ctx.moveTo(W * 0.46, horizon);
-    ctx.lineTo(W * 0.08, H);
+    ctx.moveTo(
+        W * 0.47,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.06,
+        H
+    );
 
     ctx.stroke();
+
+    /* حافة يمين */
 
     ctx.beginPath();
 
-    ctx.moveTo(W * 0.54, horizon);
-    ctx.lineTo(W * 0.92, H);
+    ctx.moveTo(
+        W * 0.53,
+        horizon
+    );
+
+    ctx.lineTo(
+        W * 0.94,
+        H
+    );
 
     ctx.stroke();
 
-    /* خط منتصف الشارع */
+    /* خط متقطع في المنتصف */
 
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 4;
+    for (
+        let z = Math.floor(player.z / 8) * 8 + 8;
+        z < player.z + 100;
+        z += 16
+    ) {
 
-    ctx.beginPath();
+        const p1 = project(0, z);
+        const p2 = project(0, z + 7);
 
-    ctx.moveTo(W * 0.50, horizon);
-    ctx.lineTo(W * 0.50, H);
+        if (!p1 || !p2) {
+            continue;
+        }
 
-    ctx.stroke();
+        ctx.strokeStyle = "#eeeeee";
+        ctx.lineWidth =
+            Math.max(2, p1.scale * 2);
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            p1.x,
+            p1.y
+        );
+
+        ctx.lineTo(
+            p2.x,
+            p2.y
+        );
+
+        ctx.stroke();
+    }
 }
 
 /* =========================
-   حركة الجري
+   أشجار على الطريق
+========================= */
+
+function drawTree(x, z) {
+
+    const p = project(x, z);
+
+    if (!p) {
+        return;
+    }
+
+    if (p.y < H * 0.35 || p.y > H) {
+        return;
+    }
+
+    const size = 25 * p.scale;
+
+    /* الجذع */
+
+    ctx.fillStyle = "#70452b";
+
+    ctx.fillRect(
+        p.x - size * 0.12,
+        p.y - size * 1.3,
+        size * 0.24,
+        size * 1.3
+    );
+
+    /* أوراق الشجرة */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        p.x,
+        p.y - size * 1.6,
+        size * 0.65,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "#27733b";
+    ctx.fill();
+}
+
+/* =========================
+   اللاعب من الخلف
 ========================= */
 
 function drawPlayer() {
 
-    /* انتقال سلس يمين ويسار */
+    player.x +=
+        (player.targetX - player.x) * 0.12;
 
-    playerX +=
-        (playerTargetX - playerX) * 0.12;
+    player.run += 0.22;
 
-    const centerX = W / 2;
+    const p = project(
+        player.x,
+        player.z
+    );
 
-    /*
-       الشخصية تتحرك للأمام
-       والكاميرا تتبعها.
-    */
+    if (!p) {
+        return;
+    }
 
-    const x =
-        centerX + playerX * W * 0.20;
+    const x = p.x;
 
-    const groundY = H - 100;
+    const baseY =
+        H * 0.82;
 
-    /*
-       حركة الجري:
-       الرجلان يتحركان بالتبادل
-    */
+    const jumpBob =
+        Math.sin(player.run * 2) * 3;
 
-    runTime += speed;
+    const y =
+        baseY + jumpBob;
 
-    const leg =
-        Math.sin(runTime * 12) * 12;
+    const s = 1.35;
+
+    /* حركة الأرجل */
+
+    const legMove =
+        Math.sin(player.run) * 18;
 
     /* ظل */
 
@@ -176,122 +346,163 @@ function drawPlayer() {
 
     ctx.ellipse(
         x,
-        groundY + 5,
-        32,
+        y + 7,
+        35,
         10,
         0,
         0,
         Math.PI * 2
     );
 
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.fillStyle =
+        "rgba(0,0,0,0.3)";
 
     ctx.fill();
 
-    /* جسم الشخصية من الخلف */
+    /* =====================
+       الرجل اليسرى
+    ===================== */
 
-    ctx.fillStyle = "#1d3557";
+    ctx.strokeStyle = "#18202b";
+    ctx.lineWidth = 15 * s;
+    ctx.lineCap = "round";
 
-    ctx.fillRect(
-        x - 22,
-        groundY - 90,
-        44,
-        60
+    ctx.beginPath();
+
+    ctx.moveTo(
+        x - 9 * s,
+        y - 30 * s
     );
 
-    /* الرأس */
+    ctx.lineTo(
+        x - 17 * s,
+        y + legMove
+    );
+
+    ctx.stroke();
+
+    /* =====================
+       الرجل اليمنى
+    ===================== */
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        x + 9 * s,
+        y - 30 * s
+    );
+
+    ctx.lineTo(
+        x + 17 * s,
+        y - legMove
+    );
+
+    ctx.stroke();
+
+    /* =====================
+       الجسم
+    ===================== */
+
+    ctx.fillStyle = "#2468a6";
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        x - 25 * s,
+        y - 105 * s,
+        50 * s,
+        75 * s,
+        12 * s
+    );
+
+    ctx.fill();
+
+    /* =====================
+       حقيبة ظهر
+    ===================== */
+
+    ctx.fillStyle = "#173b5d";
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        x - 19 * s,
+        y - 98 * s,
+        38 * s,
+        50 * s,
+        8 * s
+    );
+
+    ctx.fill();
+
+    /* =====================
+       الرأس
+    ===================== */
 
     ctx.beginPath();
 
     ctx.arc(
         x,
-        groundY - 110,
-        22,
+        y - 125 * s,
+        25 * s,
         0,
         Math.PI * 2
     );
 
-    ctx.fillStyle = "#d6a27a";
-
+    ctx.fillStyle = "#c98f68";
     ctx.fill();
 
-    /* الشعر */
+    /* الشعر من الخلف */
 
     ctx.beginPath();
 
     ctx.arc(
         x,
-        groundY - 120,
-        23,
+        y - 132 * s,
+        27 * s,
         Math.PI,
         Math.PI * 2
     );
 
-    ctx.fillStyle = "#222";
-
+    ctx.fillStyle = "#202020";
     ctx.fill();
 
-    /* الذراع اليسرى */
+    /* =====================
+       الذراع اليسرى
+    ===================== */
+
+    ctx.strokeStyle = "#2468a6";
+    ctx.lineWidth = 13 * s;
 
     ctx.beginPath();
 
-    ctx.moveTo(x - 20, groundY - 75);
-
-    ctx.lineTo(
-        x - 42,
-        groundY - 45 + leg
+    ctx.moveTo(
+        x - 23 * s,
+        y - 90 * s
     );
 
-    ctx.lineWidth = 12;
-    ctx.strokeStyle = "#1d3557";
+    ctx.lineTo(
+        x - 43 * s,
+        y - 55 * s + legMove
+    );
 
     ctx.stroke();
 
-    /* الذراع اليمنى */
+    /* =====================
+       الذراع اليمنى
+    ===================== */
 
     ctx.beginPath();
 
-    ctx.moveTo(x + 20, groundY - 75);
-
-    ctx.lineTo(
-        x + 42,
-        groundY - 45 - leg
+    ctx.moveTo(
+        x + 23 * s,
+        y - 90 * s
     );
 
-    ctx.lineWidth = 12;
-    ctx.strokeStyle = "#1d3557";
-
-    ctx.stroke();
-
-    /* الرجل اليسرى */
-
-    ctx.beginPath();
-
-    ctx.moveTo(x - 10, groundY - 30);
-
     ctx.lineTo(
-        x - 18,
-        groundY + leg
+        x + 43 * s,
+        y - 55 * s - legMove
     );
-
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = "#111";
-
-    ctx.stroke();
-
-    /* الرجل اليمنى */
-
-    ctx.beginPath();
-
-    ctx.moveTo(x + 10, groundY - 30);
-
-    ctx.lineTo(
-        x + 18,
-        groundY - leg
-    );
-
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = "#111";
 
     ctx.stroke();
 }
@@ -302,33 +513,48 @@ function drawPlayer() {
 
 function drawChaser() {
 
-    const x = W / 2;
-    const y = H - 35;
+    const p = project(
+        0,
+        player.z - 3
+    );
+
+    if (!p) {
+        return;
+    }
+
+    const x = p.x;
+
+    const y = H * 0.93;
+
+    /* الرأس */
 
     ctx.beginPath();
 
     ctx.arc(
         x,
-        y - 25,
-        16,
+        y - 45,
+        15,
         0,
         Math.PI * 2
     );
 
-    ctx.fillStyle = "#333";
-
+    ctx.fillStyle = "#242424";
     ctx.fill();
 
+    /* الجسم */
+
+    ctx.fillStyle = "#242424";
+
     ctx.fillRect(
-        x - 15,
-        y - 10,
-        30,
-        35
+        x - 16,
+        y - 30,
+        32,
+        45
     );
 }
 
 /* =========================
-   اللعبة
+   حلقة اللعبة
 ========================= */
 
 function gameLoop() {
@@ -340,15 +566,28 @@ function gameLoop() {
         H
     );
 
-    /* الشخصية تتقدم */
+    /* اللاعب نفسه يتقدم للأمام */
 
-    playerZ += speed;
+    player.z += player.speed;
 
     drawWorld();
 
-    drawPlayer();
+    /* الأشجار ثابتة في العالم */
+
+    for (
+        let z =
+            Math.floor(player.z / 20) * 20 + 20;
+        z < player.z + 100;
+        z += 20
+    ) {
+
+        drawTree(-5, z);
+        drawTree(5, z + 8);
+    }
 
     drawChaser();
+
+    drawPlayer();
 
     requestAnimationFrame(gameLoop);
 }
